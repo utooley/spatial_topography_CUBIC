@@ -113,7 +113,7 @@ yeo_dev_rh <- yeo_dev_partition$rh.labels
 
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
-vis.data.on.subject(subjects_dir, 'fsaverage6',yeo_dev_lh, yeo_dev_rh, "inflated", colormap = yeo_colors,  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+vis.data.on.subject(subjects_dir, 'fsaverage6',yeo_dev_lh, yeo_dev_rh, "inflated", makecmap_options = list('colFn'=yeo_colors),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
 
 #try visualizing the annotation file instead! This enables rotation. Need to copy the annotation into the CBIG/Schaefer/Freesurfer5.3 subjects directory first
 #subjects_dir = "/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/lh.yeodev.fsaverage6.annot";
@@ -1194,7 +1194,41 @@ makecmap_options=list('colFn'=colFn_diverging,100)
 vis.data.on.subject(subjects_dir, 'fsaverage5',principal_gradient_6_lh ,principal_gradient_6_rh , "inflated", 
                     makecmap_options = makecmap_options, views="t4", rgloptions = rgloptions)
 
+#########################
 
+# REPLICATION IN TEST SAMPLE -----------------------------------------------------------
+
+#######################
+# Plot the Yeo developmental partition on brain ---------------------------
+yeo_dev_replication="/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n544_2runsonly_1000tries/"
+
+#Read in the Yeo developmental vector of assignments
+yeo_dev_partition_rep <- readMat(paste0(yeo_dev_replication,"yeo7_n544_2runsonly_1000tries.mat"), drop = )
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo_dev/"
+
+yeo_dev_rep_lh <- yeo_dev_partition_rep$lh.labels
+yeo_dev_rep_rh <- yeo_dev_partition_rep$rh.labels
+
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"communities_n544_replication.png"))
+makecmap_options=list('colFn'=yeo_colors)
+vis.data.on.subject(subjects_dir, 'fsaverage6',yeo_dev_rep_lh, yeo_dev_rep_rh, "inflated", makecmap_options = list('colFn'=yeo_colors),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+#Compare to original yeodev
+compar_lh <- as.numeric(yeo_dev_partition_rep$lh.labels==yeo_dev_partition$lh.labels)
+compar_rh <- as.numeric(yeo_dev_partition_rep$rh.labels==yeo_dev_partition$rh.labels)
+rglactions=list("snapshot_png"=paste0(output_image_directory,"replication_sample_diff.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6', compar_lh, compar_rh, "inflated", makecmap_options = list('colFn'=colorRampPalette(c("black","white"))),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+#try visualizing the annotation file instead! This enables rotation. Need to copy the annotation into the CBIG/Schaefer/Freesurfer5.3 subjects directory first
+#subjects_dir = "/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/lh.yeodev.fsaverage6.annot";
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
+vis.subject.annot(subjects_dir, 'fsaverage6', 'yeonets.fsaverage6', 'both',  'inflated', views=c('t4'), rgloptions = rgloptions, rglactions = rglactions);
+
+rgloptions=list("windowRect"=c(50,50,200,200));
+rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
+vis.subject.annot(subjects_dir, 'fsaverage6', 'yeonets.fsaverage6', 'rh',  'inflated', views=c('sr'), rgloptions = rgloptions, rglactions = rglactions);
 
 #########################
 
