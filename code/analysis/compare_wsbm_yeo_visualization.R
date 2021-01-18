@@ -1220,15 +1220,22 @@ compar_rh <- as.numeric(yeo_dev_partition_rep$rh.labels==yeo_dev_partition$rh.la
 rglactions=list("snapshot_png"=paste0(output_image_directory,"replication_sample_diff.png"))
 vis.data.on.subject(subjects_dir, 'fsaverage6', compar_lh, compar_rh, "inflated", makecmap_options = list('colFn'=colorRampPalette(c("black","white"))),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
 
-#try visualizing the annotation file instead! This enables rotation. Need to copy the annotation into the CBIG/Schaefer/Freesurfer5.3 subjects directory first
-#subjects_dir = "/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/lh.yeodev.fsaverage6.annot";
-rgloptions=list("windowRect"=c(50,50,1000,1000));
-rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
-vis.subject.annot(subjects_dir, 'fsaverage6', 'yeonets.fsaverage6', 'both',  'inflated', views=c('t4'), rgloptions = rgloptions, rglactions = rglactions);
+# Confidence maps for replication -----------------------------------------
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo_dev/"
 
-rgloptions=list("windowRect"=c(50,50,200,200));
-rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
-vis.subject.annot(subjects_dir, 'fsaverage6', 'yeonets.fsaverage6', 'rh',  'inflated', views=c('sr'), rgloptions = rgloptions, rglactions = rglactions);
+silhouette_lh <-  yeo_dev_partition_rep$lh.s #this is in fsaverage6 space, so 40k vertices
+silhouette_rh <-  yeo_dev_partition_rep$rh.s
+
+#clip values below 0 to be equal to 0
+lower_bound <- ecdf(silhouette_rh)(0)#find the value
+clipped_silhouette_rh <- clip.data(silhouette_rh, lower_bound,0.6)
+lower_bound <- ecdf(silhouette_lh)(0)#find the value
+clipped_silhouette_lh <- clip.data(silhouette_lh, lower_bound,0.6)
+
+#Visuzalize them
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette_replication.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", makecmap_options = list('colFn'=colorRampPalette(c("burlywood4","burlywood3","white"))),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
 
 #########################
 
