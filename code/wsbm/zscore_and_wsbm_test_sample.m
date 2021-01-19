@@ -127,8 +127,7 @@ for n=1:height(subjlist)
     end
 end
 outfile=dataset(subjlist, sub_log_lik_for_weights, sub_log_lik_for_edges, sub_log_evidence, sub_unique_labels, sub_labels)
-export(outfile,'File',fullfile(wsbm_dir,strcat('thresh_',density),'wsbm_k7_n544_site14site20_50trials.csv'),'Delimiter',',')
-
+export(outfile,'File',fullfile(wsbm_dir,'wsbm_k7_n544_site14site20_50trials.csv'),'Delimiter',',')
 
 %% Run WSBM with threshold at 50% and 70% density
 % k=7
@@ -172,116 +171,117 @@ export(outfile,'File',fullfile(wsbm_dir,strcat('thresh_',density),'wsbm_k7_n544_
 % export(outfile,'File',fullfile(wsbm_dir,strcat('thresh_',density),'wsbm_k7_n670_site16_thresh_50trials.csv'),'Delimiter',',')
 % end
 % 
-% %% Relabel community partitions to be most parsimonious across subjects, create a consensus partition
-% yeo_nodes=dlmread('~/Desktop/cluster/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')
-% yeo_nodes=dlmread('/data/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')
-% 
-% %read in each subject's wsbm partition
-% for n=1:height(subjlist)
-%     sub=char(subjlist.id(n));
-%     %load the wsbm for a given subject
-%     file=fullfile(wsbm_dir,strcat(sub,'_wsbm.mat'));
-%     try 
-%         load(file);
-%         sub_log_evidence(n,1)=Model.Para.LogEvidence;
-%         %a row for each subject's labels for the k=7 partition
-%         %sub_labels(n,:)=Labels; skip this, before relabeling for
-%         %persistence with Yeo these are not right
-%         %Look at how many unique labels were output, since Rick says these might be
-%         %different
-%         sub_unique_labels(n,1)=numel(unique(Labels));
-%         models(n, :)=Model;
-%         partition=Labels;%load in the partition from the WSBM for this subject
-%         part_matrix(:,n)=partition;
-%         %save how similar a subject is to Yeo partition
-%         sub_similarity_to_yeo=zrand(partition, yeo_nodes);
-%     catch
-%     fprintf('Cant read sub %s, skipped. \n', sub);
-%     end
-% end
-% 
-% %save subject-level variables.
-% outfile=dataset(subjlist.id, sub_log_evidence, sub_unique_labels, sub_labels, sub_similarity_to_yeo)
-% export(outfile,'File',fullfile(wsbm_dir,'wsbm_k7_n670_site16_50trials.csv'),'Delimiter',',')
-% 
-% %either use multislice_pair_label or just pair_label
-% %input=400 by p (nodes by partitions) matrix, each subj is a column, n
-% %subjects
-% %don't do this if you relabel for Yeo at the subject level!
-% %yeo_opt_part_matrix=multislice_pair_labeling([yeo_nodes part_matrix])
-% noyeo_opt_part_matrix=multislice_pair_labeling(opt_part_matrix)
-% %opt_part_matrix=part_matrix
-% 
-% %% Create consensus partitions
-% %Similarity, similarity partition
-% consensus_mat=consensus_similarity(noyeo_opt_part_matrix')'; %maybe transposed?
-% %see z-score of the Rand coefficient for the consensus community
-% [zrandconsensus,~,~,VIconsensus]=zrand(yeo_nodes,consensus_mat)
-% 
-% %consensus iterative partition (does it matter if you relabel or not? Not more than it varies with iterating over mod max)
-% gamma=2 %when keeping the thresholding of the consensus matrix, this is the right gamma
-% [consensus_mat_iter_noyeo Q2 X_new3 qpc cooccurence_matrix]=consensus_iterative(noyeo_opt_part_matrix', gamma);
-% [consensus_iter_mode freq ties]=mode(consensus_mat_iter_noyeo) %can also look at nodes that still aren't able to be assigned , which nodes are have the most variance across nodes in the coocurrence matrix.
-% %see z-score of the Rand coefficient for the consensus iterative partition
-% zrandconsensus_iter=zrand(yeo_nodes,consensus_iter_mode)
-% 
-% %% Variance in assignment
-% 
-% %looking at the frequencies of assignments in consensus iterative across Yeo communities
-% freq_continuous=abs(freq-670)' %get the absolute value of how many times less than 670 it was assigned to the same community
-% comms=unique(yeo_nodes)
-% for i = 1:length(comms) % for each of the yeo communities
-%     Wi = yeo_nodes == comms(i); % find index for parcels with that community
-%     Wv_temp = freq_continuous(Wi,1); % extract node var for those parcels
-%     %average it
-%     num_ties_consensus_iter_by_yeocomm(i)=mean(Wv_temp); 
-% end
-% 
-% %need to figure out entropy on the co-occurence matrix--not sure this is
-% %right!
-% p = bsxfun(@rdivide,cooccurence_matrix,sum(cooccurence_matrix));  % probabilities
-% p = bsxfun(@rdivide,cooccurence_matrix,670);  % probabilities
-% p2=p;
-% p2(p==1)=NaN;
-% node_entropy = -nansum(p.*log2(p))';        % entropy
-% 
-% %save these outfiles
-% outfile=('/cbica/projects/spatial_topography//data/imageData/wsbm/site16_training_sample/brains/consensus_iter_freq_entr.mat'))
-% save(outfile, 'freq', 'node_entropy')
-% %% Relabel the consensus representative and group partitions so they are visually comparable to Yeo
-% %relabel the consensus partitions so that they are visually comparable to Yeo
-% consensus_iter_mode_yeorelabeled=multislice_pair_labeling([yeo_nodes consensus_iter_mode']);
-% consensus_iter_mode_yeorelabeled=consensus_iter_mode_yeorelabeled(:,2);
-% consensus_represent_yeorelabeled=multislice_pair_labeling([yeo_nodes consensus_mat_noyeo])
-% consensus_represent_yeorelabeled=consensus_represent_yeorelabeled(:,2)
-% 
-% outfile=(fullfile(outdir, 'n670_training_sample_consensus_partitions_yeorelabeled.mat'))
-% save(outfile, 'consensus_iter_mode_yeorelabeled', 'consensus_represent_yeorelabeled')
-% 
-% %% Permutation testing for ZRand
-% % For similarity partition
-% for i=1:10000
-%     permuted_labels=consensus_mat(randperm(length(consensus_mat)));
-%     zrand_permuted(i)=zrand(yeo_nodes, permuted_labels');
-% end
-% hist(zrand_permuted)
-% hold on
-% line([zrandconsensus zrandconsensus], [0,300])
-% perm_zrand_dist=fitdist(zrand_permuted','Normal')
-% p=cdf(perm_zrand_dist, zrandconsensus)
-% 
-% % For consensus partition
-% 
-% %% SAVE OUTFILES
-% outdir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample/brains/'
-% outfile=(fullfile(outdir, 'n670_training_sample_relabel_first_consensus_mat_and_nodal_variance.mat'))
-% save(outfile, 'opt_part_matrix', 'part_matrix', 'node_var', 'node_entropy', 'consensus_mat', 'node_mode')
-% outfile=(fullfile(outdir, 'n670_training_sample_relabel_first_nodal_var.mat'))
-% save(outfile, 'node_var')
-% outfile=(fullfile(outdir, 'n670_training_sample_relabel_first_nodal_entropy.mat'))
-% save(outfile, 'e')
-% outfile=(fullfile(outdir, 'consensus_mat.mat'))
-% save(outfile, 'consensus_mat')
+%% Relabel community partitions to be most parsimonious across subjects, create a consensus partition
+yeo_nodes=dlmread('~/Desktop/cluster/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')
+yeo_nodes=dlmread('/data/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')
+yeo_nodes=dlmread('/cbica/projects/spatial_topography/tools/parcellations/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')
+
+%read in each subject's wsbm partition
+for n=1:height(subjlist)
+    sub=char(subjlist.id(n))
+    %load the wsbm for a given subject
+    file=fullfile(wsbm_dir,strcat(sub,'_wsbm.mat'));
+    try 
+        load(file);
+        sub_log_evidence(n,1)=Model.Para.LogEvidence;
+        %a row for each subject's labels for the k=7 partition
+        %sub_labels(n,:)=Labels; skip this, before relabeling for
+        %persistence with Yeo these are not right
+        %Look at how many unique labels were output, since Rick says these might be
+        %different
+        sub_unique_labels(n,1)=numel(unique(Labels));
+        models(n, :)=Model;
+        partition=Labels;%load in the partition from the WSBM for this subject
+        part_matrix(:,n)=partition;
+        %save how similar a subject is to Yeo partition
+        %sub_similarity_to_yeo=zrand(partition, yeo_nodes);
+    catch
+    fprintf('Cant read sub %s, skipped. \n', sub);
+    end
+end
+
+%save subject-level variables.
+outfile=dataset(subjlist.id, sub_log_evidence, sub_unique_labels)
+export(outfile,'File',fullfile(wsbm_dir,'wsbm_k7_n544_site14site20_50trials.csv'),'Delimiter',',')
+
+%either use multislice_pair_label or just pair_label
+%input=400 by p (nodes by partitions) matrix, each subj is a column, n
+%subjects
+%don't do this if you relabel for Yeo at the subject level!
+%yeo_opt_part_matrix=multislice_pair_labeling([yeo_nodes part_matrix])
+opt_part_matrix=part_matrix
+noyeo_opt_part_matrix=multislice_pair_labeling(opt_part_matrix)
+
+
+%% Create consensus partitions
+%Similarity, similarity partition
+consensus_mat=consensus_similarity(noyeo_opt_part_matrix')'; %maybe transposed?
+%see z-score of the Rand coefficient for the consensus community
+[zrandconsensus,~,~,VIconsensus]=zrand(yeo_nodes,consensus_mat)
+
+%consensus iterative partition (does it matter if you relabel or not? Not more than it varies with iterating over mod max)
+gamma=2 %when keeping the thresholding of the consensus matrix, this is the right gamma
+[consensus_mat_iter_noyeo Q2 X_new3 qpc cooccurence_matrix]=consensus_iterative(noyeo_opt_part_matrix', gamma);
+[consensus_iter_mode freq ties]=mode(consensus_mat_iter_noyeo) %can also look at nodes that still aren't able to be assigned , which nodes are have the most variance across nodes in the coocurrence matrix.
+%see z-score of the Rand coefficient for the consensus iterative partition
+zrandconsensus_iter=zrand(yeo_nodes,consensus_iter_mode)
+
+%% Variance in assignment
+%looking at the frequencies of assignments in consensus iterative across Yeo communities
+freq_continuous=abs(freq-670)' %get the absolute value of how many times less than 670 it was assigned to the same community
+comms=unique(yeo_nodes)
+for i = 1:length(comms) % for each of the yeo communities
+    Wi = yeo_nodes == comms(i); % find index for parcels with that community
+    Wv_temp = freq_continuous(Wi,1); % extract node var for those parcels
+    %average it
+    num_ties_consensus_iter_by_yeocomm(i)=mean(Wv_temp); 
+end
+
+%need to figure out entropy on the co-occurence matrix--not sure this is
+%right!
+p = bsxfun(@rdivide,cooccurence_matrix,sum(cooccurence_matrix));  % probabilities
+p = bsxfun(@rdivide,cooccurence_matrix,670);  % probabilities
+p2=p;
+p2(p==1)=NaN;
+node_entropy = -nansum(p.*log2(p))';        % entropy
+
+%save these outfiles
+outfile=('/cbica/projects/spatial_topography/data/imageData/wsbm/site14site20_test_sample/brains/consensus_iter_freq.mat')
+save(outfile, 'freq')
+%% Relabel the consensus representative and group partitions so they are visually comparable to Yeo
+%relabel the consensus partitions so that they are visually comparable to Yeo
+consensus_iter_mode_yeorelabeled=multislice_pair_labeling([yeo_nodes consensus_iter_mode']);
+consensus_iter_mode_yeorelabeled=consensus_iter_mode_yeorelabeled(:,2);
+consensus_represent_yeorelabeled=multislice_pair_labeling([yeo_nodes consensus_mat_noyeo])
+consensus_represent_yeorelabeled=consensus_represent_yeorelabeled(:,2)
+
+outfile=('/cbica/projects/spatial_topography/data/imageData/wsbm/site14site20_test_sample/brains/n544_test_sample_consensus_partitions_yeorelabeled.mat')
+save(outfile, 'freq','consensus_iter_mode_yeorelabeled')
+
+%% Permutation testing for ZRand
+% For similarity partition
+for i=1:10000
+    permuted_labels=consensus_mat(randperm(length(consensus_mat)));
+    zrand_permuted(i)=zrand(yeo_nodes, permuted_labels');
+end
+hist(zrand_permuted)
+hold on
+line([zrandconsensus zrandconsensus], [0,300])
+perm_zrand_dist=fitdist(zrand_permuted','Normal')
+p=cdf(perm_zrand_dist, zrandconsensus)
+
+% For consensus partition
+
+%% SAVE OUTFILES
+outdir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample/brains/'
+outfile=(fullfile(outdir, 'n670_training_sample_relabel_first_consensus_mat_and_nodal_variance.mat'))
+save(outfile, 'opt_part_matrix', 'part_matrix', 'node_var', 'node_entropy', 'consensus_mat', 'node_mode')
+outfile=(fullfile(outdir, 'n670_training_sample_relabel_first_nodal_var.mat'))
+save(outfile, 'node_var')
+outfile=(fullfile(outdir, 'n670_training_sample_relabel_first_nodal_entropy.mat'))
+save(outfile, 'e')
+outfile=(fullfile(outdir, 'consensus_mat.mat'))
+save(outfile, 'consensus_mat')
 % 
 % %% UNUSED-Look at node variance & entropy by Yeo network
 % %node_var=load(fullfile(dir,'node_var.mat'));
