@@ -218,23 +218,25 @@ consensus_iter_mode_yeorelabeled=consensus_iter_mode_yeorelabeled(:,2);
 consensus_represent_yeorelabeled=multislice_pair_labeling([yeo_nodes consensus_mat_noyeo])
 consensus_represent_yeorelabeled=consensus_represent_yeorelabeled(:,2)
 
+outfile='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/brains/n670_training_sample_consensus_partitions_yeorelabeled.mat'
 outfile=(fullfile(outdir, 'n670_training_sample_consensus_partitions_yeorelabeled.mat'))
 save(outfile, 'consensus_iter_mode_yeorelabeled', 'consensus_represent_yeorelabeled')
 %% Save a .nii file so can see WSBM on the brain 
 %read into nifti?
-templateVolume = '/data/picsl/mackey_group/tools/schaefer400/Schaefer2018_400Parcels_7Networks_order_FSLMNI152_1mm.nii.gz'
+templateVolume = '/cbica/projects/spatial_topography/tools/parcellations/schaefer400/Schaefer2018_400Parcels_7Networks_order_FSLMNI152_1mm.nii.gz'
 nii = load_nii(templateVolume);
 image = double(nii.img);
 spacing = nii.hdr.dime.pixdim(2:4);
 
 %% Assign labels to brain regions
-outdir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample/brains/testing_relabeling'
+outdir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/brains/'
 % read in the mapping of template nifti voxel label numbers to actual brain regions
-mapping = readtable('/data/picsl/mackey_group/tools/schaefer400/schaefer400x7NodeIndex.1D.txt','ReadVariableNames',false);
+mapping = readtable('/cbica/projects/spatial_topography/tools/parcellations/schaefer400/schaefer400x7NodeIndex.1D.txt','ReadVariableNames',false);
 %mapping = readtable('~/Documents/tooleyEnviNetworks/parcels/Glasser/glasser_lookup.csv');
 mapping_nums=table2array(mapping(:,1));
 brains=struct('yeo_mode',yeo_mode, 'noyeo_mode', noyeo_mode, 'consensus_mat_noyeo', consensus_mat_noyeo, 'consensus_mat_yeo', consensus_mat_yeo);
 brains=struct('avg_modal_partition',avg_modal_partition, 'avg_modal_partition2', avg_modal_partition2, 'avg_modal_partition_mode_mode', mode);
+brains=struct('consensus_iter_mode_yeorelabeled',consensus_iter_mode_yeorelabeled)
 
 names=fieldnames(brains);
 for x=1:numel(names)
@@ -249,7 +251,7 @@ for x=1:numel(names)
     orig = orig(1:3);
     niiNew = make_nii(parc,spacing,orig); %write out the new nifti
     niiNew.hrd.dime.bitpix=16; %set the datatype
-    save_nii(niiNew,strcat('/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample/brains/testing_relabeling/wsbm_k7_n670_site16_',char(names(x)),'.nii'));
+    save_nii(niiNew,strcat('/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/brains/wsbm_k7_n670_site16_',char(names(x)),'.nii'));
 end
 
 %% COMPARE TO CONSENSUS PARTITION FOR I DID FIRST, RELABELING TO YEO AT SUBJECT LEVEL
