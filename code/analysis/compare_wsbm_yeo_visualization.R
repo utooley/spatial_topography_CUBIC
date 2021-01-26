@@ -777,7 +777,7 @@ freq_rh=as.list(setNames(c(0, freq[201:400]), schaefer_atlas_region_names_rh))
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"inconsistent_assignment.png"))
 vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  freq_lh, 
-                             freq_rh, colormap=colorRampPalette(c("white","burlywood3","burlywood4")), "inflated", views="t9", rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
+                             freq_rh, makecmap_options = list('colFn'=colorRampPalette(c("white","burlywood3","burlywood4"))), "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
 
 # Areas of low confidence in the WSBM -------------------------------------
 #load silhouette data
@@ -1214,11 +1214,17 @@ rglactions=list("snapshot_png"=paste0(output_image_directory,"communities_n544_r
 makecmap_options=list('colFn'=yeo_colors)
 vis.data.on.subject(subjects_dir, 'fsaverage6',yeo_dev_rep_lh, yeo_dev_rep_rh, "inflated", makecmap_options = list('colFn'=yeo_colors),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
 
-#Compare to original yeodev
+# Compare to the original yeo-dev -----------------------------------------
 compar_lh <- as.numeric(yeo_dev_partition_rep$lh.labels==yeo_dev_partition$lh.labels)
 compar_rh <- as.numeric(yeo_dev_partition_rep$rh.labels==yeo_dev_partition$rh.labels)
 rglactions=list("snapshot_png"=paste0(output_image_directory,"replication_sample_diff.png"))
 vis.data.on.subject(subjects_dir, 'fsaverage6', compar_lh, compar_rh, "inflated", makecmap_options = list('colFn'=colorRampPalette(c("black","white"))),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+#numeric values for comparison
+perc_same_vertices=(sum(compar_rh)+sum(compar_lh))/(length(compar_rh)*2)
+#different hemispheres
+sum(compar_rh)/length(compar_rh)
+sum(compar_lh)/length(compar_lh)
 
 # Confidence maps for replication -----------------------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo_dev/"
@@ -1236,6 +1242,61 @@ clipped_silhouette_lh <- clip.data(silhouette_lh, lower_bound,0.6)
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette_replication.png"))
 vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", makecmap_options = list('colFn'=colorRampPalette(c("burlywood4","burlywood3","white"))),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+# Plotting WSBM replication -----------------------------------------------
+subject_id = 'fsaverage';       # for functions which use one subject only
+atlas='Schaefer2018_400Parcels_7Networks_order'
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
+
+#Get the Schaefer atlas region names
+schaefer_atlas_region_names_lh = get.atlas.region.names(atlas, template_subjects_dir = subjects_dir,template_subject=subject_id, hemi="lh");
+schaefer_atlas_region_names_rh = get.atlas.region.names(atlas, template_subjects_dir = subjects_dir,template_subject=subject_id, hemi="rh");
+
+#Vector of WSBM community assignments
+wsbm_datadir="/cbica/projects/spatial_topography/data/imageData/wsbm/site14site20_test_sample/brains/"
+partitions <- readMat(paste0(wsbm_datadir,"n544_test_sample_consensus_partitions_yeorelabeled.mat"), drop = )
+consensus_iterative_labels_replication <- partitions$consensus.iter.mode.yeorelabeled
+freq <- partitions$freq
+
+#Create a list from the vector of Schaefer structure names and the labels from WSBM consensus partition
+wsbm_consensus_lh_rep=as.list(setNames(c(0, consensus_iterative_labels_replication[1:200]), schaefer_atlas_region_names_lh))
+wsbm_consensus_rh_rep=as.list(setNames(c(0, consensus_iterative_labels_replication[201:400]), schaefer_atlas_region_names_rh))
+
+#make colormap of Yeo colors
+yeo_colors=colorRampPalette(c("#000000", "#7B287E", "#5CA1C8", "#0A9045","#C33AF8","#EF9C23","#dcf8a4", "#E34A53")) #these are corr
+makecmap_options=list('colFn'=yeo_colors)
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+#Plot communities
+rglactions=list("snapshot_png"=paste0(output_image_directory,"communities_replication_colors_switched.png"))
+vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh_rep, 
+                             wsbm_consensus_rh_rep, makecmap_options = makecmap_options, "inflated", views="t4",rgloptions = rgloptions, rglactions = rglactions)
+
+# Compare to the original WSBM-----------------------------------------
+compar_lh <- as.numeric(as.numeric(wsbm_consensus_lh)==as.numeric(wsbm_consensus_lh_rep))
+compar_rh <- as.numeric(as.numeric(wsbm_consensus_rh)==as.numeric(wsbm_consensus_rh_rep))
+rglactions=list("snapshot_png"=paste0(output_image_directory,"replication_sample_diff.png"))
+vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  compar_lh, 
+                             compar_rh, makecmap_options = list('colFn'=colorRampPalette(c("black","white"))), "inflated", views="t4",rgloptions = rgloptions, rglactions = rglactions)
+
+#numeric values for comparison
+perc_same_vertices=(sum(compar_rh)+sum(compar_lh))/(length(compar_rh)*2)
+perc_same_vertices
+#different hemispheres
+sum(compar_rh)/length(compar_rh)
+sum(compar_lh)/length(compar_lh)
+
+# Areas of inconsistent assignment in WSBM rep --------------------------------
+freq=abs(freq-544) #change into the number of non-modal assignments out of 670
+hist(freq)
+
+#Create a list from the vector of Schaefer structure names and the labels from WSBM consensus partition
+freq_lh=as.list(setNames(c(0, freq[1:200]), schaefer_atlas_region_names_lh))
+freq_rh=as.list(setNames(c(0, freq[201:400]), schaefer_atlas_region_names_rh))
+
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"inconsistent_assignment_replication.png"))
+vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  freq_lh, 
+                             freq_rh, makecmap_options = list('colFn'=colorRampPalette(c("white","burlywood3","burlywood4"))), "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
 
 #########################
 
