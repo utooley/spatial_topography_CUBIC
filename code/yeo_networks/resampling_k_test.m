@@ -1,3 +1,4 @@
+%% Trying with the 
 %x='/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/yeo7_n670_2runsonly_1000tries_lh_profile.txt'
 addpath('/cbica/projects/spatial_topography/code/yeo_networks')
 %input profiles data.
@@ -78,10 +79,48 @@ normalize=0;
 % save('/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/resampling_out.mat')
 
 %% Estimate the stability
-load('/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/resampling_out.mat')
+% load('/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/resampling_out.mat')
+% x=series;res=out;
+% CBIG_determineK_single(series,out)
+% 
+% save('stability.mat')
+% save('/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/stability.mat')
+%% Trying with suggested code by Ruby Kong, use ConsistencySurf.m instead of resamplingk and determinek.m
+addpath('/cbica/projects/spatial_topography/code/yeo_networks')
+%input profiles data.
+profile1='/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/lh.yeo7_n670_2runsonly_1000tries.avg_profiles007.nii.gz'
+profile2='/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/rh.yeo7_n670_2runsonly_1000tries.avg_profiles007.nii.gz'
+mesh_name='fsaverage6'
+mask='cortex'
+num_smooth=0;
+normalize=0;
+num_clusters=2 %:30
+num_tries=10 %1000
+rand_num=1000 %not sure this is right!
+dim=1
+normalize=1
+output_dir='/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/search_over_k/'
 
-CBIG_determineK_single(series,out)
+for k=2:25
+%for k = 19:25 %still need to do 11-19 with rand_num=10
+CBIG_VonmisesSeriesConsistencySurf(mesh_name, mask, k, output_dir, profile1, profile2, num_smooth, num_tries, rand_num, dim, normalize)
+end
 
-save('stability.mat')
-save('/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/stability.mat')
+% clear consistency_true consistency_rand stability_rand stability_true
+% for k = 2:25
+%     if k >= 10
+%         load(fullfile(output_dir,  strcat('Cluster0',num2str(k),'.s00.tries10.rand010.znorm1.dim1..mat')))
+%     else
+%          load(fullfile(output_dir,  strcat('Cluster00',num2str(k),'.s00.tries10.rand010.znorm1.dim1..mat')))
+%     end
+%     consistency_true(:,k)=con_struct.orig_overlap'
+%     consistency_rand(:,k)=con_struct.rand_overlap'
+%     try
+%     stability_true(:,k)=con_struct.stab
+%     stability_rand(:,k)=con_struct.rand_stab
+%     catch
+%     end
+% end
+% outfile=dataset(consistency_true, consistency_rand,stability_true,stability_rand)
+% export(outfile,'File',strcat(output_dir,'/k2_to_25_tries10_rand010.znorm1.dim1.csv'),'Delimiter',',')
 

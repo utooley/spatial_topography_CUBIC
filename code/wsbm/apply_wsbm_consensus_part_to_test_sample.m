@@ -102,3 +102,94 @@ mean_system_conn_mat=mean(system_connectivity_all,3)
 % header={'sys1', 'sys2', 'sys3','sys4','sys5','sys6','sys7'}
 % mean_system_conn_mat.Properties.VariableNames=header;
 save(fullfile(outdir, 'n546_mean_wsbm_consensus_iter_connectivity.mat'), 'mean_system_conn_mat')
+
+%% Calculate log-evidence of different k's of WSBM calculated on testing sample
+%idea is that higher k's could just be overfitting data, test the consensus
+%partition on the replication sample
+
+%% First must create a consensus partition at each k
+yeo_nodes=dlmread('/cbica/projects/cbpd_main_data/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')
+wsbm_dir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/search_over_k/'
+%get the testing subject list
+test_subjlist=readtable(fullfile(listdir,'n544_filtered_runs_site14site20_postprocess.csv')) %the first two runs here are those that were input into gwMRF
+test_subjlist=test_subjlist.id;
+%get training subject list
+listdir='/cbica/projects/spatial_topography/data/subjLists/release2/site16/parcellation'
+subjlist=readtable(fullfile(listdir,'n670_filtered_runs_site16_postprocess.csv')) %the first two runs here are those that were input into gwMRF
+
+k=8
+%read in each subject's wsbm partition
+for k=[2,8,10,15]
+for n=1:height(subjlist)
+    sub=char(subjlist.id(n));
+    %load the wsbm for a given subject
+    file=fullfile(wsbm_dir,strcat(sub,'_k',num2str(k),'_wsbm.mat'));
+    try 
+        load(file);
+        partition=Labels;%load in the partition from the WSBM for this subject
+        part_matrix(:,n)=partition;
+    catch
+    fprintf('Cant read sub %s, skipped. \n', sub);
+    end
+end
+
+%either use multislice_pair_label or just pair_label
+%input=400 by p (nodes by partitions) matrix, each subj is a column, n
+%subjects
+%don't do this if you relabel for Yeo at the subject level!
+%yeo_opt_part_matrix=multislice_pair_labeling([yeo_nodes part_matrix])
+opt_part_matrix=part_matrix
+noyeo_opt_part_matrix=multislice_pair_labeling(opt_part_matrix)
+
+%% Create consensus partitions
+
+%consensus iterative partition (does it matter if you relabel or not? Not more than it varies with iterating over mod max)
+gamma=2 %when keeping the thresholding of the consensus matrix, this is the right gamma
+[consensus_mat_iter_noyeo Q2 X_new3 qpc cooccurence_matrix]=consensus_iterative(noyeo_opt_part_matrix', gamma);
+[consensus_iter_mode freq ties]=mode(consensus_mat_iter_noyeo) %can also look at nodes that still aren't able to be assigned , which nodes are have the most variance across nodes in the coocurrence matrix.
+%save out
+consensus_iter_mode_yeorelabeled=multislice_pair_labeling([yeo_nodes consensus_iter_mode']);
+consensus_iter_mode_yeorelabeled=consensus_iter_mode_yeorelabeled(:,2);
+outdir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/brains/'
+outfile=(fullfile(outdir, strcat('n670_k',num2str(k),'training_sample_consensus_partition.mat')))
+save(outfile, 'consensus_iter_mode_yeorelabeled')
+
+%% Calculate log-evidence of this partition on the testing sample
+%load subjlist
+listdir='/cbica/projects/spatial_topography/data/subjLists/release2/site14site20/'
+z_avg_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400zavgNetworks'
+
+%load in the FC matrix for each subject, estimate the log-evidence for the
+%consensus partition at that k
+for n=1:size(test_subjlist,1)
+    sub=test_subjlist{n,:}
+    try 
+        %% Load FC matrix
+        fcfile=fullfile(z_avg_outdir,strcat(sub,'_avg_Schaefer400x7_znetwork.txt'));
+        %parcel 52 is already gone
+        subfcmat = load(fcfile);
+        %for connectivity matrix A
+         Data = A(:);
+        w = 0.000001;
+        [WDistr] = setup_distr('Normal',[mean(Data),var(Data)+mean(Data)^2,w],1);
+
+        %perform the following line just to get a basic model structure, run only
+        %for a single trial
+        [S(n,:),M] = wsbm(subfcmat,k,'W_Distr','Normal','numTrials',1,'E_Distr','None');
+        LE(n) = calc_logEvidence(M);
+
+        %want to get the log-likelihood for some partition L fitting the network A
+
+        LP(n) = calc_nullEvidence(M,consensus_iter_mode_yeorelabeled,subfcmat);
+
+    catch
+    fprintf('Cant read sub %s, skipped. \n', sub{1});
+    end
+end
+
+%save outfile
+outdir='/cbica/projects/spatial_topography/data/imageData/wsbm/site14site20_test_sample/brains/'
+outfile=dataset(test_subjlist, LE,LP)
+export(outfile,'File',fullfile(outdir,strcat('n544_test_sample_',num2str(k),'.csv')),'Delimiter',',')
+
+end
