@@ -8,6 +8,7 @@ library(lm.beta)
 library(ggplot2)
 require(reshape2)
 library(lme4)
+library(R.matlab)
 # SETUP -------------------------------------------------------------------
 #Cluster mounted locally on personal computer
 sublistdir="~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site14site20/"
@@ -313,22 +314,117 @@ for (hemi in hemispheres){
 
 #RGB of colors for MATLAB
 colors <- t(col2rgb(c("black","gray","purple","blue","aquamarine","khaki1","magenta","orange", "red")))
-# Plot the search over k ------------------------------------------------------
-k_dir="~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample/search_over_k/"
+
+# Plot the search over k: WSBM ------------------------------------------------------
+k_dir="/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/search_over_k/"
 logevidence=matrix(NA,670,18)
-for (i in 1:18){
-  k=i+3
+for (i in 1:17){
+  k=i+1
   try(mine <- read.csv(paste0(k_dir, "wsbm_search_over_k",k,"_n670_site16_30trials.csv")))
-  logevidence[,i] <- with(mine, if("subjlist_.4" %in% colnames(mine)) subjlist_.4 else Var4)
+  logevidence[,k] <- with(mine, if("subjlist_.4" %in% colnames(mine)) subjlist_.4 else Var4)
 }
 #remove the outlier subject sub-NDARINVK0U3PRRR
-colnames(logevidence)=lapply(4:21, function(x) paste0("k",x)) #give them column names
+logevidence <- logevidence[mine$Var1!="sub-NDARINVK0U3PRRR",]
+#colnames(logevidence)=lapply(1:22, function(x) paste0("k",x)) #give them column names
 #k10 is full of 0's, filter out those who haven't finished k9
 logevidence2 <- filter(data.frame(logevidence), !is.na(logevidence[,6]))
 logevidence[logevidence==0] <- NA
-longdata <- melt(logevidence, varnames = c("x","k"))
-p<-ggplot(longdata, aes(x=k, y=value)) + geom_jitter(position=position_jitter(0.2), cex=1, alpha=0.5)+stat_summary(aes(group=1),
-                                                                                                                          fun.y = median, geom="line", col=rgb(101, 58, 150, maxColorValue = 255)) + theme_classic()
+longdata_training <- melt(logevidence, varnames = c("x","k")) %>% filter(k != 1 & k != 18)
+p<-ggplot(longdata_training, aes(x=k, y=value)) + geom_jitter(position=position_jitter(0.2), cex=1, alpha=0.5)+stat_summary(aes(group=1),
+                                                                                                                          fun.y = mean, geom="line", col=rgb(101, 58, 150, maxColorValue = 255)) + theme_classic()
+p
+
+# Plot the search over k: WSBM replicate -----------------------------------------------------
+k_dir="/cbica/projects/spatial_topography/data/imageData/wsbm/site14site20_test_sample/brains/"
+wsbm_datadir="/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/brains/"
+#add different data file for k=7, "n544_test_sample_",k,"consensus_log_evidence_replicate_7try.csv"
+
+partition_logevidence=matrix(NA,544,18)
+num_comms=numeric()
+for (i in 2:17){
+  k=i
+  print(k)
+  try(mine <- read.csv(paste0(k_dir, "n544_test_sample_",k,"consensus_log_evidence_replicate.csv")))
+  partition_logevidence[,i] <- mine$LP
+  partition <- readMat(paste0(wsbm_datadir,"n670_k",k,"training_sample_consensus_partition.mat"), drop = )
+  print(range(unique(partition$consensus.iter.mode)))
+  num_comms[i] <- max(unique(partition$consensus.iter.mode))
+}
+partition_logevidence[partition_logevidence==0] <- NA
+#colnames(partition_logevidence)=lapply(1:2, function(x) paste0("k",x)) #give them column names
+longdata_testing <- melt(partition_logevidence, varnames = c("x","k")) %>% filter(k != 1 & k != 18) %>% arrange(k)
+
+p<-ggplot(data=longdata_training, aes(x=k, y=value))+geom_point(position=position_jitter(0.2), cex=1,alpha=0.05,col="black") + 
+  stat_summary(data=longdata_training, aes(group=1),fun.y = mean, geom="line", col="black") + 
+  theme_classic() +
+  #scale_y_continuous(limits=c(-32000, 100000))+
+  labs(x="k (number of communities)", y="Log-likelihood (main sample)")
+p
+ggplot_build(p)$layout$panel_scales_y[[1]]$range$range
+
+#put it on top of the training sample with 2 y-axes!
+longdata_testing$value_trans <- longdata_testing$value*(4.5)+(290000)
+l <- p+geom_point(data=longdata_testing, aes(x=k, y=value_trans),position=position_jitter(0.2), cex=1, alpha=0.05, col="#5e195e") +
+    scale_y_continuous(limits=c(ggplot_build(p)$layout$panel_scales_y[[1]]$range$range),
+                       sec.axis = sec_axis(~ . -(290000)*(1/4.5), name = "Log-likelihood (replication sample)"))+
+  stat_summary(data=longdata_testing, aes(y=value_trans,group=1), fun.y = mean, geom="line", col="#5e195e") +
+  scale_x_continuous(breaks=seq(2,17))
+l
+
+b<-ggplot(data=longdata_testing, aes(x=k, y=value))+geom_point(position=position_jitter(0.2), cex=1,alpha=0.1) + 
+  stat_summary(data=longdata_testing, aes(group=1),fun.y = mean, geom="line", col=rgb(101, 58, 150, maxColorValue = 255)) + 
+  theme_classic() 
+b
+ggplot_build(p)$layout$panel_scales_y[[1]]$range$range
+
+#plot the actual number of communities detected
+longdata <- data.frame(c(1:length(num_comms)),num_comms) %>% filter(num_comms != 1);colnames(longdata) <- c("k","num_comms")
+p<-ggplot(data=longdata, aes(x=k, y=num_comms))+geom_point(alpha=0.5)+stat_summary(aes(group=1), fun.y = mean, geom="line", col=rgb(101, 58, 150, maxColorValue = 255)) + theme_classic()
+p
+
+# Plot the search over k: Yeo ------------------------------------------------------
+k_dir="/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/search_over_k/"
+#data <- read.csv(paste0(k_dir,"k2_to_19_tries10_rand002.znorm1.dim1.csv"))%>% select(-contains("_.1"))
+data <- read.csv(paste0(k_dir,"k2to11_19to25_tries10_rand010.znorm1.dim1_nomean.csv")) %>% select(-contains("_.1"))
+longdata <- melt(data, varnames = c("x","k"))
+longdata$k <-as.numeric(gsub("[^0-9-]", "", longdata$variable))
+longdata$type <- str_extract(longdata$variable, "[a-z]+_[a-z]+" )
+longdata <- arrange(longdata, as.numeric(k))
+#plot consistency
+dat <- longdata %>% filter(type=="consistency_true")
+p<-ggplot(dat, aes(x=k, y=value, group=type)) + geom_jitter(position=position_jitter(0.2), cex=1, alpha=0.5)+stat_summary(aes(group=type, col=type),
+                                                                                                                   fun.y = mean, geom="line") + theme_classic()
+p
+
+#plot stability
+dat <- longdata %>% filter(type=="stability_true")
+p<-ggplot(dat, aes(x=k, y=value)) + stat_summary(aes(),
+                                                                                                                          fun.y = mean, geom="line") + theme_classic()
+p
+
+### For rand num = 100, or rand_num=10
+#k2_to_25_tries10_rand010.znorm1.dim1.csv
+data <- read.csv(paste0(k_dir,"k2_to_9_tries100_rand100.znorm1.dim1.csv")) %>% select(-contains("_.1"))
+data2 <-  read.csv(paste0(k_dir,"k9_to_17_tries100_rand100_temp.znorm1.dim1.csv")) %>% select(-contains(paste0("_.",1:8)))
+data <- cbind(data,data2)
+longdata <- melt(data, varnames = c("x","k"))
+longdata$k <-as.numeric(gsub("[^0-9-]", "", longdata$variable))
+longdata$type <- str_extract(longdata$variable, "[a-z]+_[a-z]+" )
+longdata <- arrange(longdata, as.numeric(k))
+longdata$value[longdata$value==0] <- NA
+#plot consistency
+dat <- longdata %>% filter(type=="consistency_true")
+p<-ggplot(dat, aes(x=k, y=value)) + geom_jitter(position=position_jitter(0.2), cex=1, alpha=0.5)+stat_summary(aes(),
+                                                                                                              fun.y = mean, geom="line") + theme_classic()
+p
+
+#plot stability
+dat <- longdata %>% filter(type=="stability_true") %>% filter(k!=1)
+p<-ggplot(dat, aes(x=k, y=value)) + geom_jitter(position=position_jitter(0.2), cex=1, alpha=0.05)+stat_summary(aes(group=type),
+                                                                                                                          fun.y = mean, geom="line") + theme_classic()+scale_x_continuous(breaks=seq(2,17))+ylab(label = "Instability")
+p
+
+p<-ggplot(dat, aes(x=k, y=value)) +stat_summary(aes(group=type),fun.y = mean, geom="line") + theme_classic() +coord_cartesian(ylim=c(0, 0.2))+scale_x_continuous(breaks=seq(2,17))+ylab(label = "Instability")
 p
 
 # Plot system connectivity matrices ---------------------------------------
