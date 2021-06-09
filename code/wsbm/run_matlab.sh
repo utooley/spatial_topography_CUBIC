@@ -7,4 +7,4 @@ set -euo pipefail
 #$ -cwd
 
 code_dir='/cbica/projects/spatial_topography/code/wsbm'
-matlab -nodisplay -r "cd ${code_dir}, run('zscore_and_wsbm_training_sample.m'); exit"
+matlab -nodisplay -r "cd ${code_dir}, run('apply_wsbm_consensus_part_to_test_sample.m'); exit"
